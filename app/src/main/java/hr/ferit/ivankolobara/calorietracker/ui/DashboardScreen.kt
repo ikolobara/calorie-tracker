@@ -1,5 +1,6 @@
 package hr.ferit.ivankolobara.calorietracker.ui
 
+import android.annotation.SuppressLint
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -23,9 +24,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,24 +44,24 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import hr.ferit.ivankolobara.calorietracker.R
+import hr.ferit.ivankolobara.calorietracker.Routes
 
 
-@Preview(showBackground = true)
 @Composable
-fun DashboardScreen() {
+fun DashboardScreen(navigation: NavHostController) {
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize()
     ) {
-        TopNavMenu()
+        TopNavMenu(navigation)
         CircularCalorieGraph(300, 2130, Color.Blue, Color.DarkGray)
         ClickableListWithPopup()
-        IconButton(R.drawable.ic_plus, "Add meal")
+        IconButton(R.drawable.ic_plus, "Add meal", navigation)
     }
 }
 
@@ -110,17 +113,25 @@ fun CircularCalorieGraph(
     )
 }
 
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun ClickableListWithPopup() {
-    val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks") // Your list items
+    val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
+    val meals = mutableStateMapOf(
+        "Breakfast" to mutableListOf("Pancakes", "Eggs", "Coffee"),
+        "Lunch" to mutableListOf("Salad", "Soup", "Bread"),
+        "Dinner" to mutableListOf("Steak", "Potatoes", "Wine"),
+        "Snacks" to mutableListOf("Chips", "Fruit", "Yogurt")
+    )
+
+
     var showPopup by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .padding(24.dp)
-            .padding(top = 64.dp, bottom = 0.dp),
-
+            .padding(top = 18.dp, bottom = 0.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items.forEach { item ->
@@ -148,10 +159,39 @@ fun ClickableListWithPopup() {
         AlertDialog(
             onDismissRequest = { showPopup = false },
             title = {
-                Text(text = "Item Selected")
+                Text(text = "$selectedItem")
             },
             text = {
-                Text(text = "You clicked on $selectedItem")
+                val mealList = meals[selectedItem] ?: emptyList()
+                Column {
+                    mealList.forEachIndexed { index, meal ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = meal,
+                                fontSize = 16.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row {
+                                TextButton(onClick = {
+                                    meals[selectedItem]?.set(index, "Edited Meal")
+                                }) {
+                                    Text("Edit")
+                                }
+                                TextButton(onClick = {
+                                    meals[selectedItem]?.removeAt(index)
+                                }) {
+                                    Text("Delete")
+                                }
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(onClick = { showPopup = false }) {
@@ -165,12 +205,13 @@ fun ClickableListWithPopup() {
 @Composable
 fun IconButton(
     @DrawableRes iconResource: Int,
-    text: String
+    text: String,
+    navigation: NavHostController
 ) {
     Button(
-        onClick = { /*TODO*/ },
+        onClick = { navigation.navigate(Routes.AddMeal) },
         colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
-        modifier = Modifier.padding(top = 36.dp)
+        modifier = Modifier.padding(top = 18.dp)
     ) {
         Row {
             Icon(
@@ -191,8 +232,10 @@ fun IconButton(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopNavMenu() {
-    Column(modifier = Modifier.padding(bottom = 72.dp),
+fun TopNavMenu(
+    navigation: NavHostController
+) {
+    Column(modifier = Modifier.padding(bottom = 56.dp),
     horizontalAlignment = Alignment.CenterHorizontally) {
         TopAppBar(
             title = {
@@ -208,7 +251,7 @@ fun TopNavMenu() {
                         .size(40.dp)
                         .clip(CircleShape)
                         .clickable {
-                            // Here you would handle click, for now it does nothing
+                            navigation.navigate(Routes.Profile)
                         }
                 ) {
                     Image(
