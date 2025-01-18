@@ -26,7 +26,7 @@ fun NavigationController() {
             ProfileScreen(navigation = navController)
         }
         composable(Routes.AddMeal) {
-            AddMealScreen()
+            AddMealScreen(navigation = navController)
         }
     }
 }

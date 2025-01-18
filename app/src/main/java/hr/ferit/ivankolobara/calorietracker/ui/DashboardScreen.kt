@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,11 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,8 +59,8 @@ fun DashboardScreen(navigation: NavHostController) {
     ) {
         TopNavMenu(navigation)
         CircularCalorieGraph(300, 2130, Color.Blue, Color.DarkGray)
-        ClickableListWithPopup()
-        IconButton(R.drawable.ic_plus, "Add meal", navigation)
+        ExpandableListWithCalories()
+        CustomIconButton(R.drawable.ic_plus, "Add food", navigation)
     }
 }
 
@@ -115,7 +114,7 @@ fun CircularCalorieGraph(
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun ClickableListWithPopup() {
+fun ExpandableListWithCalories() {
     val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
     val meals = mutableStateMapOf(
         "Breakfast" to mutableListOf("Pancakes", "Eggs", "Coffee"),
@@ -124,47 +123,65 @@ fun ClickableListWithPopup() {
         "Snacks" to mutableListOf("Chips", "Fruit", "Yogurt")
     )
 
+    val calorieMap = mutableStateMapOf(
+        "Pancakes" to 200, "Eggs" to 150, "Coffee" to 50,
+        "Salad" to 120, "Soup" to 250, "Bread" to 200,
+        "Steak" to 400, "Potatoes" to 300, "Wine" to 150,
+        "Chips" to 220, "Fruit" to 100, "Yogurt" to 120
+    )
 
-    var showPopup by remember { mutableStateOf(false) }
-    var selectedItem by remember { mutableStateOf("") }
+    // Track expanded categories
+    val expandedItems = remember { mutableStateMapOf<String, Boolean>().apply {
+        items.forEach { this[it] = false }
+    } }
 
     Column(
         modifier = Modifier
-            .padding(24.dp)
-            .padding(top = 18.dp, bottom = 0.dp),
+            .padding(16.dp)
+            .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items.forEach { item ->
+        items.forEach { category ->
+            val isExpanded = expandedItems[category] ?: false
+            val totalCalories = meals[category]?.sumOf { calorieMap[it] ?: 0 } ?: 0
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(color = Color.LightGray, shape = RoundedCornerShape(8.dp))
-                    .padding(16.dp)
+                    .background(Color.LightGray, RoundedCornerShape(8.dp))
                     .clickable {
-                        selectedItem = item
-                        showPopup = true
-                    },
+                        expandedItems[category] = !isExpanded
+                    }
+                    .padding(16.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
-                Text(
-                    text = item,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "$category - $totalCalories kcal",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
 
-    if (showPopup) {
-        AlertDialog(
-            onDismissRequest = { showPopup = false },
-            title = {
-                Text(text = "$selectedItem")
-            },
-            text = {
-                val mealList = meals[selectedItem] ?: emptyList()
-                Column {
-                    mealList.forEachIndexed { index, meal ->
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = null
+                    )
+                }
+            }
+
+            if (isExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    meals[category]?.forEachIndexed { index, meal ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -173,18 +190,18 @@ fun ClickableListWithPopup() {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = meal,
+                                text = "$meal - ${calorieMap[meal] ?: 0} kcal",
                                 fontSize = 16.sp,
                                 modifier = Modifier.weight(1f)
                             )
-                            Row {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 TextButton(onClick = {
-                                    meals[selectedItem]?.set(index, "Edited Meal")
+                                    meals[category]?.set(index, "Edited Meal")
                                 }) {
                                     Text("Edit")
                                 }
                                 TextButton(onClick = {
-                                    meals[selectedItem]?.removeAt(index)
+                                    meals[category]?.removeAt(index)
                                 }) {
                                     Text("Delete")
                                 }
@@ -192,18 +209,13 @@ fun ClickableListWithPopup() {
                         }
                     }
                 }
-            },
-            confirmButton = {
-                Button(onClick = { showPopup = false }) {
-                    Text(text = "Close")
-                }
             }
-        )
+        }
     }
 }
 
 @Composable
-fun IconButton(
+fun CustomIconButton(
     @DrawableRes iconResource: Int,
     text: String,
     navigation: NavHostController

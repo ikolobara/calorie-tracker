@@ -1,27 +1,27 @@
 package hr.ferit.ivankolobara.calorietracker.ui
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,25 +29,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.DarkGray
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import hr.ferit.ivankolobara.calorietracker.R
+import hr.ferit.ivankolobara.calorietracker.Routes
 
-@Preview(showBackground = true)
 @Composable
-fun AddMealScreen() {
+fun AddMealScreen(navigation: NavHostController) {
     var selectedMealType by remember { mutableStateOf("") }
     val mealTypes = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
 
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
-            .padding(top = 128.dp)
+        modifier = Modifier
+            .fillMaxSize()
     ) {
+        NavBar(navigation)
         SearchMeal(R.drawable.ic_search, "Search...")
         DropdownMenuComponent(
             selectedMealType = selectedMealType,
@@ -57,7 +57,6 @@ fun AddMealScreen() {
             }
         )
         InputServingSize()
-        AddMealButton("Add Meal")
     }
 }
 
@@ -100,7 +99,8 @@ fun DropdownMenuComponent(
 ) {
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxWidth()
+    Box(modifier = Modifier
+        .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)
         .clickable { isDropdownExpanded = true }) {
         OutlinedTextField(
@@ -142,7 +142,8 @@ fun DropdownMenuComponent(
 fun InputServingSize() {
     var servingSize by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxWidth()
+    Column(modifier = Modifier
+        .fillMaxWidth()
         .padding(horizontal = 16.dp, vertical = 8.dp)){
         OutlinedTextField(
             value = servingSize,
@@ -153,30 +154,31 @@ fun InputServingSize() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddMealButton(
-    text: String,
-    // navigation: NavHostController
+fun NavBar(
+    navigation: NavHostController
 ) {
-    Box(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Button(
-            onClick = {  },
-            // onClick = { navigation.navigate(Routes.Dashboard) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-        ) {
-            Row {
-                Image(
-                    painter = painterResource(id = R.drawable.check_mark),
-                    contentDescription = text,
-                    modifier = Modifier
-                        .height(24.dp).width(24.dp)
+    TopAppBar(
+        title = {
+            Text(text = "Add Food")
+        },
+        navigationIcon = {
+            IconButton(onClick = { navigation.navigate(Routes.Dashboard) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Go Back"
                 )
             }
-        }
-    }
+        },
+        actions = {
+            IconButton(onClick = { navigation.navigate(Routes.Dashboard) }) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Accept"
+                )
+            }
+        },
+    )
 }
+
