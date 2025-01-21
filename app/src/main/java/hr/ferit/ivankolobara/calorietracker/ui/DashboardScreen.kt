@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,7 +50,6 @@ import androidx.navigation.NavHostController
 import hr.ferit.ivankolobara.calorietracker.R
 import hr.ferit.ivankolobara.calorietracker.Routes
 
-
 @Composable
 fun DashboardScreen(navigation: NavHostController) {
     Column(
@@ -59,8 +59,7 @@ fun DashboardScreen(navigation: NavHostController) {
     ) {
         TopNavMenu(navigation)
         CircularCalorieGraph(300, 2130, Color.Blue, Color.DarkGray)
-        ExpandableListWithCalories()
-        CustomIconButton(R.drawable.ic_plus, "Add food", navigation)
+        ExpandableListWithCalories(navigation)
     }
 }
 
@@ -73,48 +72,74 @@ fun CircularCalorieGraph(
     remainingColor: Color = Color.Red
 ) {
     val consumedPercentage = consumedCalories.toFloat() / totalCalories
+    val remainingCalories = totalCalories - consumedCalories
 
-    Canvas(modifier = Modifier.size(150.dp)) {
-        drawArc(
-            color = remainingColor,
-            startAngle = -90f,
-            sweepAngle = 360f,
-            useCenter = false,
-            style = Stroke(width = 20f)
-        )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.size(150.dp)
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawArc(
+                color = remainingColor,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = 20f)
+            )
 
-        drawArc(
-            color = consumedColor,
-            startAngle = -90f,
-            sweepAngle = 360f * consumedPercentage,
-            useCenter = false,
-            style = Stroke(width = 20f)
-        )
+            drawArc(
+                color = consumedColor,
+                startAngle = -90f,
+                sweepAngle = 360f * consumedPercentage,
+                useCenter = false,
+                style = Stroke(width = 20f)
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "$remainingCalories",
+                style = TextStyle(
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = remainingColor
+                )
+            )
+            Text(
+                text = "Remaining",
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color.Black
+                )
+            )
+        }
     }
+
     Text(
         text = buildAnnotatedString {
-            withStyle(style = SpanStyle(color = consumedColor)){
+            withStyle(style = SpanStyle(color = consumedColor)) {
                 append("$consumedCalories")
             }
-            withStyle(style = SpanStyle(color = Color.Black)){
+            withStyle(style = SpanStyle(color = Color.Black)) {
                 append("/")
             }
-            withStyle(style = SpanStyle(color = remainingColor)){
+            withStyle(style = SpanStyle(color = remainingColor)) {
                 append("$totalCalories")
             }
         },
         style = TextStyle(
-            fontSize = 26.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         ),
-        modifier = Modifier
-            .padding(vertical = 16.dp, horizontal = 16.dp)
+        modifier = Modifier.padding(top = 16.dp)
     )
 }
 
+
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun ExpandableListWithCalories() {
+fun ExpandableListWithCalories(navigation: NavHostController) {
     val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
     val meals = mutableStateMapOf(
         "Breakfast" to mutableListOf("Pancakes", "Eggs", "Coffee"),
@@ -130,80 +155,92 @@ fun ExpandableListWithCalories() {
         "Chips" to 220, "Fruit" to 100, "Yogurt" to 120
     )
 
-    // Track expanded categories
     val expandedItems = remember { mutableStateMapOf<String, Boolean>().apply {
         items.forEach { this[it] = false }
     } }
 
     Column(
         modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items.forEach { category ->
-            val isExpanded = expandedItems[category] ?: false
-            val totalCalories = meals[category]?.sumOf { calorieMap[it] ?: 0 } ?: 0
+        .fillMaxSize()
+        .padding(horizontal = 8.dp)
+        .padding(bottom = 64.dp, top = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+        LazyColumn(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.forEach { category ->
+                val isExpanded = expandedItems[category] ?: false
+                val totalCalories = meals[category]?.sumOf { calorieMap[it] ?: 0 } ?: 0
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.LightGray, RoundedCornerShape(8.dp))
-                    .clickable {
-                        expandedItems[category] = !isExpanded
-                    }
-                    .padding(16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "$category - $totalCalories kcal",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = null
-                    )
-                }
-            }
-
-            if (isExpanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                        .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    meals[category]?.forEachIndexed { index, meal ->
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.LightGray, RoundedCornerShape(8.dp))
+                            .clickable {
+                                expandedItems[category] = !isExpanded
+                            }
+                            .padding(16.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                text = "$meal - ${calorieMap[meal] ?: 0} kcal",
-                                fontSize = 16.sp,
-                                modifier = Modifier.weight(1f)
+                                text = "$category - $totalCalories kcal",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = {
-                                    meals[category]?.set(index, "Edited Meal")
-                                }) {
-                                    Text("Edit")
-                                }
-                                TextButton(onClick = {
-                                    meals[category]?.removeAt(index)
-                                }) {
-                                    Text("Delete")
+
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                }
+
+                if (isExpanded) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            meals[category]?.forEachIndexed { index, meal ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "$meal - ${calorieMap[meal] ?: 0} kcal",
+                                        fontSize = 16.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(onClick = {
+                                            meals[category]?.set(index, "Edited Meal")
+                                        }) {
+                                            Text("Edit")
+                                        }
+                                        TextButton(onClick = {
+                                            meals[category]?.removeAt(index)
+                                        }) {
+                                            Text("Delete")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -211,6 +248,7 @@ fun ExpandableListWithCalories() {
                 }
             }
         }
+        CustomIconButton(R.drawable.ic_plus, "Add Food", navigation)
     }
 }
 
@@ -223,7 +261,7 @@ fun CustomIconButton(
     Button(
         onClick = { navigation.navigate(Routes.AddMeal) },
         colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
-        modifier = Modifier.padding(top = 18.dp)
+        modifier = Modifier.padding(top = 0.dp)
     ) {
         Row {
             Icon(
