@@ -37,7 +37,7 @@ import hr.ferit.ivankolobara.calorietracker.R
 import hr.ferit.ivankolobara.calorietracker.Routes
 
 @Composable
-fun AddMealScreen(navigation: NavHostController) {
+fun AddFoodScreen(navigation: NavHostController) {
     var selectedMealType by remember { mutableStateOf("") }
     val mealTypes = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
 
@@ -60,7 +60,6 @@ fun AddMealScreen(navigation: NavHostController) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchMeal(
     @DrawableRes iconResource: Int,
@@ -89,6 +88,7 @@ fun SearchMeal(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )
+
 }
 
 @Composable

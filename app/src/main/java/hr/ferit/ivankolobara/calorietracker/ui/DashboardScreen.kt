@@ -27,9 +27,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,9 +49,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import hr.ferit.ivankolobara.calorietracker.R
 import hr.ferit.ivankolobara.calorietracker.Routes
+import hr.ferit.ivankolobara.calorietracker.ui.data.UserViewModel
+import java.time.LocalDate
 
 @Composable
-fun DashboardScreen(navigation: NavHostController) {
+fun DashboardScreen(navigation: NavHostController, userViewModel: UserViewModel) {
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -59,7 +61,7 @@ fun DashboardScreen(navigation: NavHostController) {
     ) {
         TopNavMenu(navigation)
         CircularCalorieGraph(300, 2130, Color.Blue, Color.DarkGray)
-        ExpandableListWithCalories(navigation)
+        ExpandableListWithCalories(navigation = navigation, userViewModel = userViewModel)
     }
 }
 
@@ -137,35 +139,50 @@ fun CircularCalorieGraph(
 }
 
 
-@SuppressLint("UnrememberedMutableState")
+@SuppressLint("UnrememberedMutableState", "RememberReturnType", "NewApi")
 @Composable
-fun ExpandableListWithCalories(navigation: NavHostController) {
+fun ExpandableListWithCalories(userViewModel: UserViewModel, navigation: NavHostController) {
     val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
-    val meals = mutableStateMapOf(
-        "Breakfast" to mutableListOf("Pancakes", "Eggs", "Coffee"),
-        "Lunch" to mutableListOf("Salad", "Soup", "Bread"),
-        "Dinner" to mutableListOf("Steak", "Potatoes", "Wine"),
-        "Snacks" to mutableListOf("Chips", "Fruit", "Yogurt")
-    )
+    val user = userViewModel.userData.value
 
-    val calorieMap = mutableStateMapOf(
-        "Pancakes" to 200, "Eggs" to 150, "Coffee" to 50,
-        "Salad" to 120, "Soup" to 250, "Bread" to 200,
-        "Steak" to 400, "Potatoes" to 300, "Wine" to 150,
-        "Chips" to 220, "Fruit" to 100, "Yogurt" to 120
-    )
+// Get today's date components
+    val today = LocalDate.now()
+    val todayDay = today.dayOfMonth
+    val todayMonth = today.monthValue
+    val todayYear = today.year
 
-    val expandedItems = remember { mutableStateMapOf<String, Boolean>().apply {
-        items.forEach { this[it] = false }
-    } }
+    val meals = remember { mutableStateMapOf<String, MutableList<Pair<String, Int>>>() } // Meal name and calories
+    val expandedItems = remember { mutableStateMapOf<String, Boolean>().apply { items.forEach { this[it] = false } } }
+
+// Populate meals dynamically based on user data
+    LaunchedEffect(user) {
+        meals.clear()
+        user?.meals?.forEach { (mealType, mealsList) ->
+            // Filter meals based on today's date
+            mealsList.filter { meal ->
+                val mealDateString = meal.date // Assuming the date is stored as a string "dd.MM.yyyy"
+                val (mealDay, mealMonth, mealYear) = mealDateString.split(".").map { it.toIntOrNull() ?: 0 }
+
+                // Compare the stored meal date with today's date
+                mealDay == todayDay && mealMonth == todayMonth && mealYear == todayYear
+            }.forEach { meal ->
+                // Add meal data to the corresponding meal type
+                meals.computeIfAbsent(mealType) { mutableListOf() }
+                    .add(Pair(meal.mealId.id ?: "Unknown Meal", meal.servingSize))
+            }
+        }
+    }
+
+
+
 
     Column(
         modifier = Modifier
-        .fillMaxSize()
-        .padding(horizontal = 8.dp)
-        .padding(bottom = 64.dp, top = 32.dp),
+            .fillMaxSize()
+            .padding(horizontal = 8.dp)
+            .padding(bottom = 64.dp, top = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
-    ){
+    ) {
         LazyColumn(
             modifier = Modifier
                 .padding(16.dp)
@@ -175,7 +192,7 @@ fun ExpandableListWithCalories(navigation: NavHostController) {
         ) {
             items.forEach { category ->
                 val isExpanded = expandedItems[category] ?: false
-                val totalCalories = meals[category]?.sumOf { calorieMap[it] ?: 0 } ?: 0
+                val totalCalories = meals[category]?.sumOf { it.second } ?: 0
 
                 item {
                     Box(
@@ -216,7 +233,7 @@ fun ExpandableListWithCalories(navigation: NavHostController) {
                                 .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            meals[category]?.forEachIndexed { index, meal ->
+                            meals[category]?.forEach { (mealName, calories) ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -225,22 +242,10 @@ fun ExpandableListWithCalories(navigation: NavHostController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "$meal - ${calorieMap[meal] ?: 0} kcal",
+                                        text = "$mealName - $calories kcal",
                                         fontSize = 16.sp,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = {
-                                            meals[category]?.set(index, "Edited Meal")
-                                        }) {
-                                            Text("Edit")
-                                        }
-                                        TextButton(onClick = {
-                                            meals[category]?.removeAt(index)
-                                        }) {
-                                            Text("Delete")
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -251,6 +256,9 @@ fun ExpandableListWithCalories(navigation: NavHostController) {
         CustomIconButton(R.drawable.ic_plus, "Add Food", navigation)
     }
 }
+
+
+
 
 @Composable
 fun CustomIconButton(
