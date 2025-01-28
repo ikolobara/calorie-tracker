@@ -39,13 +39,5 @@ data class User(
     var dailyCalorieGoal: Int = 0,
     var gender: String = "",
     var height: Int = 0,
-    var meals: Map<String, List<UserMeals>> = emptyMap(),
     var weight: Int = 0
-)
-
-data class UserMeals(
-    var date: String = "",
-    var servingSize: Int = 0,
-    var mealId: DocumentReference? = null,
-    var mealType: String = ""
 )

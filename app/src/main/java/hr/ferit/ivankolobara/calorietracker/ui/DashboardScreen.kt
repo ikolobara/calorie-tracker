@@ -1,7 +1,9 @@
 package hr.ferit.ivankolobara.calorietracker.ui
 
 import android.annotation.SuppressLint
+import android.os.Build
 import androidx.annotation.DrawableRes
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -20,12 +22,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -49,19 +53,35 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import hr.ferit.ivankolobara.calorietracker.R
 import hr.ferit.ivankolobara.calorietracker.Routes
+import hr.ferit.ivankolobara.calorietracker.ui.data.MealDetails
+import hr.ferit.ivankolobara.calorietracker.ui.data.UserMeals
+import hr.ferit.ivankolobara.calorietracker.ui.data.UserMealsViewModel
 import hr.ferit.ivankolobara.calorietracker.ui.data.UserViewModel
 import java.time.LocalDate
+import java.time.ZoneId
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DashboardScreen(navigation: NavHostController, userViewModel: UserViewModel) {
+fun DashboardScreen(navigation: NavHostController, userMealsViewModel: UserMealsViewModel, userViewModel: UserViewModel) {
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize()
     ) {
+        val totalCalories = userViewModel.userData.value?.dailyCalorieGoal ?: 0
+        val userMeals by userMealsViewModel.userMealsData.collectAsState()
+        val mealDetailsMap by userMealsViewModel.mealDetailsMap.collectAsState()
+
         TopNavMenu(navigation)
-        CircularCalorieGraph(300, 2130, Color.Blue, Color.DarkGray)
-        ExpandableListWithCalories(navigation = navigation, userViewModel = userViewModel)
+        CircularCalorieGraph(getConsumedCalories(userMeals, mealDetailsMap),
+            totalCalories, Color.Blue, Color.DarkGray)
+        ExpandableListWithCalories(
+            navigation = navigation,
+            userMealsViewModel = userMealsViewModel,
+            userMeals = userMeals, mealDetailsMap = mealDetailsMap
+        )
     }
 }
 
@@ -139,42 +159,35 @@ fun CircularCalorieGraph(
 }
 
 
-@SuppressLint("UnrememberedMutableState", "RememberReturnType", "NewApi")
+@RequiresApi(Build.VERSION_CODES.O)
+@SuppressLint("UnrememberedMutableState", "RememberReturnType")
 @Composable
-fun ExpandableListWithCalories(userViewModel: UserViewModel, navigation: NavHostController) {
+fun ExpandableListWithCalories(userMealsViewModel: UserMealsViewModel, navigation: NavHostController,
+                               userMeals: List<UserMeals>, mealDetailsMap: Map<String, MealDetails>) {
     val items = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
-    val user = userViewModel.userData.value
 
-// Get today's date components
-    val today = LocalDate.now()
-    val todayDay = today.dayOfMonth
-    val todayMonth = today.monthValue
-    val todayYear = today.year
 
-    val meals = remember { mutableStateMapOf<String, MutableList<Pair<String, Int>>>() } // Meal name and calories
+    val meals = remember { mutableStateMapOf<String, MutableList<Triple<String, Int, String>>>() }
     val expandedItems = remember { mutableStateMapOf<String, Boolean>().apply { items.forEach { this[it] = false } } }
 
-// Populate meals dynamically based on user data
-    LaunchedEffect(user) {
+    LaunchedEffect(userMeals) {
         meals.clear()
-        user?.meals?.forEach { (mealType, mealsList) ->
-            // Filter meals based on today's date
-            mealsList.filter { meal ->
-                val mealDateString = meal.date // Assuming the date is stored as a string "dd.MM.yyyy"
-                val (mealDay, mealMonth, mealYear) = mealDateString.split(".").map { it.toIntOrNull() ?: 0 }
 
-                // Compare the stored meal date with today's date
-                mealDay == todayDay && mealMonth == todayMonth && mealYear == todayYear
-            }.forEach { meal ->
-                // Add meal data to the corresponding meal type
-                meals.computeIfAbsent(mealType) { mutableListOf() }
-                    .add(Pair(meal.mealId.id ?: "Unknown Meal", meal.servingSize))
+        val todaysMeals = getMealsForToday(userMeals)
+
+        todaysMeals.forEach { meal ->
+            val mealName = mealDetailsMap[meal.mealId?.id]?.name ?: "Unknown Meal"
+            val mealDetails = mealDetailsMap[meal.mealId?.id]
+            val totalCalories = if (mealDetails != null && mealDetails.grams > 0) {
+                ((meal.servingSize / mealDetails.grams.toFloat()) * mealDetails.calories).toInt()
+            } else {
+                0
             }
+
+            meals.computeIfAbsent(meal.mealType) { mutableListOf() }
+                .add(Triple(mealName, totalCalories, meal.id))
         }
     }
-
-
-
 
     Column(
         modifier = Modifier
@@ -233,7 +246,7 @@ fun ExpandableListWithCalories(userViewModel: UserViewModel, navigation: NavHost
                                 .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            meals[category]?.forEach { (mealName, calories) ->
+                            meals[category]?.forEach { (mealName, calories, id) ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -246,6 +259,17 @@ fun ExpandableListWithCalories(userViewModel: UserViewModel, navigation: NavHost
                                         fontSize = 16.sp,
                                         modifier = Modifier.weight(1f)
                                     )
+
+                                    IconButton(
+                                        onClick = {
+                                            userMealsViewModel.deleteMealFromDatabase(id)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = "Delete Meal"
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -256,6 +280,7 @@ fun ExpandableListWithCalories(userViewModel: UserViewModel, navigation: NavHost
         CustomIconButton(R.drawable.ic_plus, "Add Food", navigation)
     }
 }
+
 
 
 
@@ -323,4 +348,26 @@ fun TopNavMenu(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+fun getMealsForToday(userMeals: List<UserMeals>): List<UserMeals> {
+    val today = LocalDate.now()
 
+    return userMeals.filter { meal ->
+        val mealDate = meal.date?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+        mealDate == today
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun getConsumedCalories(userMeals: List<UserMeals>, mealDetailsMap: Map<String, MealDetails>): Int {
+    val todaysMeals = getMealsForToday(userMeals)
+
+    return todaysMeals.sumOf { meal ->
+        val mealDetails = mealDetailsMap[meal.mealId?.id]
+        if (mealDetails != null && mealDetails.grams > 0) {
+            ((meal.servingSize / mealDetails.grams.toFloat()) * mealDetails.calories).toInt()
+        } else {
+            0
+        }
+    }
+}
