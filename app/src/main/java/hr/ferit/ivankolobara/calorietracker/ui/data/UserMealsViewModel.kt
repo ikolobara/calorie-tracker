@@ -1,13 +1,19 @@
 package hr.ferit.ivankolobara.calorietracker.ui.data
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.ZoneId
 
 class UserMealsViewModel : ViewModel() {
     private val db = Firebase.firestore
@@ -76,6 +82,13 @@ class UserMealsViewModel : ViewModel() {
             .document("q74Tl77ZmwvcLmGDpvxV")
             .collection("meals")
             .add(meal)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getMealsForDate(date: LocalDate): Flow<List<UserMeals>> {
+        return userMealsData.map { meals ->
+            meals.filter { meal -> meal.date?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate() == date }
+        }
     }
 }
 

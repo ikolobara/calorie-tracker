@@ -8,9 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,6 +25,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,9 +48,7 @@ import hr.ferit.ivankolobara.calorietracker.Routes
 import hr.ferit.ivankolobara.calorietracker.ui.data.Meal
 import hr.ferit.ivankolobara.calorietracker.ui.data.MealToAdd
 import hr.ferit.ivankolobara.calorietracker.ui.data.MealViewModel
-import hr.ferit.ivankolobara.calorietracker.ui.data.UserMeals
 import hr.ferit.ivankolobara.calorietracker.ui.data.UserMealsViewModel
-import java.util.Locale
 
 @Composable
 fun AddFoodScreen(navigation: NavHostController, mealViewModel: MealViewModel,
@@ -65,6 +63,7 @@ fun AddFoodScreen(navigation: NavHostController, mealViewModel: MealViewModel,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xff140330))
     ) {
         NavBar(navigation,
             userMealsViewModel = userMealsViewModel,
@@ -74,7 +73,6 @@ fun AddFoodScreen(navigation: NavHostController, mealViewModel: MealViewModel,
         SearchMeal(R.drawable.ic_search,
             "Search...",
             mealViewModel = mealViewModel,
-            selectedMealId = selectedMealId,
             onMealIdChanged = { selectedMealId = it }
         )
 
@@ -94,49 +92,44 @@ fun SearchMeal(
     @DrawableRes iconResource: Int,
     labelText: String,
     mealViewModel: MealViewModel,
-    selectedMealId: String,
     onMealIdChanged: (String) -> Unit
 ) {
-    var searchInput by remember {
-        mutableStateOf("")
-    }
-
+    var searchInput by remember { mutableStateOf("") }
     val searchResults = remember { mutableStateListOf<Meal>() }
+    var isMealSelected by remember { mutableStateOf(false) }
 
     LaunchedEffect(searchInput) {
-        if (searchInput.isNotEmpty()) {
+        if (searchInput.isNotEmpty() && !isMealSelected) {
             mealViewModel.searchMeals(searchInput.capitalize()) { result ->
                 searchResults.clear()
                 searchResults.addAll(result)
             }
         } else {
-                searchResults.clear()
+            searchResults.clear()
         }
     }
 
     Box(
         modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp, vertical = 8.dp)
-    ){
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         OutlinedTextField(
             value = searchInput,
-            onValueChange = { searchInput = it },
-            label = {
-                Text("Search...")
+            onValueChange = {
+                searchInput = it
+                isMealSelected = false
             },
+            label = { Text("Search...") },
             leadingIcon = {
                 Icon(
                     painter = painterResource(id = iconResource),
                     contentDescription = labelText,
                     tint = DarkGray,
-                    modifier = Modifier
-                        .width(16.dp)
-                        .height(16.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
         )
 
         if (searchResults.isNotEmpty()) {
@@ -155,6 +148,7 @@ fun SearchMeal(
                                 searchInput = meal.name
                                 onMealIdChanged(meal.id)
                                 searchResults.clear()
+                                isMealSelected = true
                             }
                             .padding(8.dp)
                     )
@@ -163,6 +157,7 @@ fun SearchMeal(
         }
     }
 }
+
 
 @Composable
 fun DropdownMenuComponent(
@@ -234,6 +229,8 @@ fun NavBar(
     servingSize: String
 ) {
     TopAppBar(
+        colors = TopAppBarDefaults.smallTopAppBarColors(
+            containerColor = Color(0xff520655)),
         title = {
             Text(text = "Add Food")
         },

@@ -1,9 +1,7 @@
 package hr.ferit.ivankolobara.calorietracker.ui.data
 
-import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -20,7 +18,6 @@ class UserViewModel : ViewModel() {
             .get()
             .addOnSuccessListener { result ->
                 if (result.exists()) {
-                    Log.d("Firestore", "User data: ${result.data}")
                     val user = result.toObject(User::class.java)
                     if (user != null) {
                         user.id = result.id
@@ -29,6 +26,14 @@ class UserViewModel : ViewModel() {
                 }
             }
 
+    }
+
+    fun updateUserData(user: User) {
+        db.collection("users").document(user.id)
+            .set(user)
+            .addOnSuccessListener {
+                userData.value = user
+            }
     }
 }
 
@@ -39,5 +44,6 @@ data class User(
     var dailyCalorieGoal: Int = 0,
     var gender: String = "",
     var height: Int = 0,
-    var weight: Int = 0
+    var weight: Int = 0,
+    var goal: String = ""
 )

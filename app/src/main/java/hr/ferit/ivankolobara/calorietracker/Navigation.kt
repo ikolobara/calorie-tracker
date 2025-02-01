@@ -8,12 +8,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import hr.ferit.ivankolobara.calorietracker.ui.AddFoodScreen
 import hr.ferit.ivankolobara.calorietracker.ui.DashboardScreen
+import hr.ferit.ivankolobara.calorietracker.ui.HistoryScreen
 import hr.ferit.ivankolobara.calorietracker.ui.ProfileScreen
 import hr.ferit.ivankolobara.calorietracker.ui.data.MealViewModel
 import hr.ferit.ivankolobara.calorietracker.ui.data.UserMealsViewModel
 import hr.ferit.ivankolobara.calorietracker.ui.data.UserViewModel
 
 object Routes {
+    const val History = "history"
     const val Dashboard = "dashboard"
     const val Profile = "profile"
     const val AddMeal = "addmeal"
@@ -33,12 +35,18 @@ fun NavigationController(userMealsViewModel: UserMealsViewModel,
                 userViewModel = userViewModel)
         }
         composable(Routes.Profile) {
-            ProfileScreen(navigation = navController)
+            ProfileScreen(navigation = navController,
+                userViewModel = userViewModel)
         }
         composable(Routes.AddMeal) {
             AddFoodScreen(navigation = navController,
                 mealViewModel = mealViewModel,
                 userMealsViewModel = userMealsViewModel)
+        }
+        composable(Routes.History) {
+            HistoryScreen(navigation = navController,
+                userMealsViewModel = userMealsViewModel,
+                userViewModel = userViewModel)
         }
     }
 }
