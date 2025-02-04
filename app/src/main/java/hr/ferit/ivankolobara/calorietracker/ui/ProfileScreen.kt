@@ -1,6 +1,5 @@
 package hr.ferit.ivankolobara.calorietracker.ui
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -105,12 +104,6 @@ fun ProfileScreen(navigation: NavHostController, userViewModel: UserViewModel) {
                                     goal = goal
                                 )
                             )
-                            Log.d("GLEDAJ OVO MAJMUNE", "${calculateDailyCalorieGoal(age.toInt(),
-                                height.toInt(),
-                                weight.toInt(),
-                                activityLevel,
-                                goal,
-                                gender)} OVOLIKO JE GOAL $goal")
                         })
                             {
                             Icon(Icons.Default.Check, contentDescription = "Save")
